@@ -76,7 +76,42 @@ sector_colors = {
 # -----------------------------
 # UI HEADER
 # -----------------------------
-st.set_page_config(layout="centered")
+st.set_page_config(
+    page_title="Aditya Classes Bikaner – Market RRG Dashboard",
+    page_icon="aditya_classes_logo.png",
+    layout="centered"
+)
+
+# -----------------------------
+# SUBTLE BRAND BACKGROUND (OPTIONAL)
+# -----------------------------
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #fffdf8;  /* very light warm tone */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.image(
+    "aditya_classes_logo.png",
+    width=120
+)
+
+st.markdown(
+    "<h2 style='margin-top:0'>Aditya Classes, Bikaner</h2>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<p style='color:gray'>Market Relative Rotation Graph (RRG) Dashboard</p>",
+    unsafe_allow_html=True
+)
+
+st.markdown("---")
 
 st.markdown(
     """
@@ -104,6 +139,11 @@ sectors = {
 # -----------------------------
 # SIDEBAR CONTROLS
 # -----------------------------
+st.sidebar.image(
+    "aditya_classes_logo.png",
+    width=100
+)
+
 st.sidebar.header("RRG Controls")
 
 rrg_timeframe = st.sidebar.selectbox(
@@ -280,4 +320,10 @@ def highlight_row(row):
 st.dataframe(
     ranking_df.style.apply(highlight_row, axis=1),
     width="stretch"
+)
+
+st.markdown("---")
+st.markdown(
+    "<center>© 2026 Aditya Classes, Bikaner | Market Analytics Dashboard</center>",
+    unsafe_allow_html=True
 )
