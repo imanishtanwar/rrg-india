@@ -92,22 +92,22 @@ rs_momentum = 100 * rs_ratio / rs_ratio.rolling(ROLL).mean()
 # =====================================================
 fig, ax = plt.subplots(figsize=(9, 9))
 
-ax.set_xlim(90, 110)
-ax.set_ylim(90, 110)
+ax.set_xlim(95, 105)
+ax.set_ylim(95, 105)
 
 # Quadrant shading
-ax.axvspan(100, 110, 0.5, 1.0, color="#C8E6C9", alpha=0.2)   # Leading
-ax.axvspan(100, 110, 0.0, 0.5, color="#FFE0B2", alpha=0.2)   # Weakening
-ax.axvspan(90, 100, 0.0, 0.5, color="#FFCDD2", alpha=0.2)    # Lagging
-ax.axvspan(90, 100, 0.5, 1.0, color="#BBDEFB", alpha=0.2)    # Improving
+ax.axvspan(100, 105, 0.5, 1.0, color="#C8E6C9", alpha=0.2)   # Leading
+ax.axvspan(100, 105, 0.0, 0.5, color="#FFE0B2", alpha=0.2)   # Weakening
+ax.axvspan(95, 100, 0.0, 0.5, color="#FFCDD2", alpha=0.2)    # Lagging
+ax.axvspan(95, 100, 0.5, 1.0, color="#BBDEFB", alpha=0.2)    # Improving
 
 ax.axvline(100, color="black", lw=1)
 ax.axhline(100, color="black", lw=1)
 
-ax.text(109, 109, "LEADING", ha="right", va="top", weight="bold")
-ax.text(109, 91, "WEAKENING", ha="right", va="bottom", weight="bold")
-ax.text(91, 91, "LAGGING", ha="left", va="bottom", weight="bold")
-ax.text(91, 109, "IMPROVING", ha="left", va="top", weight="bold")
+ax.text(104, 104, "LEADING", ha="right", va="top", weight="bold")
+ax.text(104, 96, "WEAKENING", ha="right", va="bottom", weight="bold")
+ax.text(96, 96, "LAGGING", ha="left", va="bottom", weight="bold")
+ax.text(96, 104, "IMPROVING", ha="left", va="top", weight="bold")
 
 # Plot visible ETFs
 for etf in visible_etfs:
@@ -166,3 +166,4 @@ st.markdown(
     "<center>© 2026 Aditya Classes, Bikaner | ETF RRG Dashboard</center>",
     unsafe_allow_html=True
 )
+
