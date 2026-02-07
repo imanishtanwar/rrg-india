@@ -2,7 +2,6 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 
 # =====================================================
 # PAGE CONFIG
@@ -46,7 +45,7 @@ st.markdown("Benchmark: **NIFTYBEES**")
 st.markdown("---")
 
 # =====================================================
-# PAGINATION
+# PAGINATION CONTROLS
 # =====================================================
 total_pages = (len(ETF_LIST) - 1) // ETFS_PER_PAGE + 1
 
@@ -67,7 +66,7 @@ visible_etfs = ETF_LIST[start:end]
 st.caption(f"Showing ETFs {start+1}–{min(end,len(ETF_LIST))} of {len(ETF_LIST)}")
 
 # =====================================================
-# DATA DOWNLOAD (ALL ETFs for GLOBAL SCALE)
+# DATA DOWNLOAD (ALL ETFs)
 # =====================================================
 benchmark = yf.download(BENCHMARK, period=PERIOD, progress=False)["Close"]
 
@@ -89,87 +88,75 @@ rs_ratio = 100 * rs / rs.rolling(ROLL).mean()
 rs_momentum = 100 * rs_ratio / rs_ratio.rolling(ROLL).mean()
 
 # =====================================================
-# GLOBAL AXIS LIMITS (KEY FIX)
-# =====================================================
-x_all = rs_ratio.iloc[-1]
-y_all = rs_momentum.iloc[-1]
-
-xmin, xmax = x_all.min() * 0.97, x_all.max() * 1.03
-ymin, ymax = y_all.min() * 0.97, y_all.max() * 1.03
-
-# =====================================================
-# RRG PLOT (LOG SCALE – NO SQUEEZE)
+# RRG PLOT (FIXED SCALE 90–110)
 # =====================================================
 fig, ax = plt.subplots(figsize=(9, 9))
 
-ax.set_xscale("log")
-ax.set_yscale("log")
+ax.set_xlim(90, 110)
+ax.set_ylim(90, 110)
 
-ax.set_xlim(xmin, xmax)
-ax.set_ylim(ymin, ymax)
+# Quadrant shading
+ax.axvspan(100, 110, 0.5, 1.0, color="#C8E6C9", alpha=0.2)   # Leading
+ax.axvspan(100, 110, 0.0, 0.5, color="#FFE0B2", alpha=0.2)   # Weakening
+ax.axvspan(90, 100, 0.0, 0.5, color="#FFCDD2", alpha=0.2)    # Lagging
+ax.axvspan(90, 100, 0.5, 1.0, color="#BBDEFB", alpha=0.2)    # Improving
 
-# Quadrants
 ax.axvline(100, color="black", lw=1)
 ax.axhline(100, color="black", lw=1)
 
-ax.text(xmax*0.995, ymax*0.995, "LEADING", ha="right", va="top", weight="bold")
-ax.text(xmax*0.995, ymin*1.005, "WEAKENING", ha="right", va="bottom", weight="bold")
-ax.text(xmin*1.005, ymin*1.005, "LAGGING", ha="left", va="bottom", weight="bold")
-ax.text(xmin*1.005, ymax*0.995, "IMPROVING", ha="left", va="top", weight="bold")
+ax.text(109, 109, "LEADING", ha="right", va="top", weight="bold")
+ax.text(109, 91, "WEAKENING", ha="right", va="bottom", weight="bold")
+ax.text(91, 91, "LAGGING", ha="left", va="bottom", weight="bold")
+ax.text(91, 109, "IMPROVING", ha="left", va="top", weight="bold")
 
-# Plot only visible ETFs
+# Plot visible ETFs
 for etf in visible_etfs:
     x = rs_ratio[etf].iloc[-TAIL:]
     y = rs_momentum[etf].iloc[-TAIL:]
 
     ax.plot(x, y, marker="o", lw=1.3)
     ax.scatter(x.iloc[-1], y.iloc[-1], s=140, edgecolor="black", zorder=3)
-    ax.text(x.iloc[-1]*1.002, y.iloc[-1]*1.002, etf, fontsize=9, weight="bold")
+    ax.text(x.iloc[-1] + 0.2, y.iloc[-1] + 0.2, etf, fontsize=9, weight="bold")
 
-ax.set_xlabel("RS-Ratio (log)")
-ax.set_ylabel("RS-Momentum (log)")
+ax.set_xlabel("RS-Ratio")
+ax.set_ylabel("RS-Momentum")
 ax.set_title("Relative Rotation Graph (1Y, Weekly)")
-ax.grid(True, which="both", alpha=0.4)
+ax.grid(True)
 
 st.pyplot(fig)
 
 # =====================================================
-# MASTER QUADRANT TABLE + TREND ARROWS
+# MASTER QUADRANT TABLE (ONLY ETF NAMES)
 # =====================================================
-rows = []
+quadrants = {
+    "Leading": [],
+    "Weakening": [],
+    "Lagging": [],
+    "Improving": []
+}
 
 for etf in ETF_LIST:
-    rs_now = rs_ratio[etf].iloc[-1]
-    mom_now = rs_momentum[etf].iloc[-1]
+    rs_val = rs_ratio[etf].iloc[-1]
+    mom_val = rs_momentum[etf].iloc[-1]
 
-    rs_prev = rs_ratio[etf].iloc[-2]
-    mom_prev = rs_momentum[etf].iloc[-2]
-
-    if rs_now >= 100 and mom_now >= 100:
-        quad = "Leading"
-    elif rs_now >= 100 and mom_now < 100:
-        quad = "Weakening"
-    elif rs_now < 100 and mom_now < 100:
-        quad = "Lagging"
+    if rs_val >= 100 and mom_val >= 100:
+        quadrants["Leading"].append(etf)
+    elif rs_val >= 100 and mom_val < 100:
+        quadrants["Weakening"].append(etf)
+    elif rs_val < 100 and mom_val < 100:
+        quadrants["Lagging"].append(etf)
     else:
-        quad = "Improving"
+        quadrants["Improving"].append(etf)
 
-    if rs_now > rs_prev and mom_now > mom_prev:
-        trend = "↗"
-    elif rs_now < rs_prev and mom_now < mom_prev:
-        trend = "↘"
-    else:
-        trend = "→"
+max_len = max(len(v) for v in quadrants.values())
 
-    rows.append([etf, quad, trend, round(rs_now,2), round(mom_now,2)])
+quadrant_df = pd.DataFrame({
+    k: v + [""] * (max_len - len(v))
+    for k, v in quadrants.items()
+})
 
-master_df = pd.DataFrame(
-    rows,
-    columns=["ETF", "Quadrant", "Trend", "RS-Ratio", "RS-Momentum"]
-).sort_values(["Quadrant","ETF"])
-
-st.subheader("Master ETF Quadrant Table (All ETFs)")
-st.dataframe(master_df, use_container_width=True, hide_index=True)
+st.subheader("ETF Quadrant Classification (All ETFs)")
+st.dataframe(quadrant_df, use_container_width=True, hide_index=True)
 
 # =====================================================
 # FOOTER
