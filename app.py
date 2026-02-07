@@ -4,16 +4,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # =====================================================
-# CONFIGURATION
+# PAGE CONFIG
 # =====================================================
 st.set_page_config(
     page_title="Aditya Classes Bikaner – ETF RRG Dashboard",
     layout="centered"
 )
 
+# =====================================================
+# CONSTANTS
+# =====================================================
 PERIOD = "1y"
 BENCHMARK = "NIFTYBEES.NS"
-ETFS_PER_PAGE = 5   # change to 10 later if needed
+ETFS_PER_PAGE = 5
 
 ETF_LIST = [
     "BANKIETF", "CPSEETF", "ENERGY", "EVIETF", "FINIETF",
@@ -26,7 +29,7 @@ def ns(symbol):
     return f"{symbol}.NS"
 
 # =====================================================
-# SESSION STATE (PAGINATION)
+# SESSION STATE – PAGINATION
 # =====================================================
 if "page" not in st.session_state:
     st.session_state.page = 0
@@ -94,63 +97,89 @@ rs_momentum = 100 * rs_ratio / rs_ratio.rolling(14).mean()
 tail_length = 10
 
 # =====================================================
-# RRG PLOT
+# RRG PLOT (NO SQUEEZE / DYNAMIC SCALE)
 # =====================================================
-fig, ax = plt.subplots(figsize=(8, 8))
+fig, ax = plt.subplots(figsize=(9, 9))
+
+x_last = rs_ratio[visible_etfs].iloc[-1]
+y_last = rs_momentum[visible_etfs].iloc[-1]
+
+x_min, x_max = x_last.min(), x_last.max()
+y_min, y_max = y_last.min(), y_last.max()
+
+pad_x = (x_max - x_min) * 0.4
+pad_y = (y_max - y_min) * 0.4
+
+xmin = min(x_min - pad_x, 98)
+xmax = max(x_max + pad_x, 102)
+ymin = min(y_min - pad_y, 98)
+ymax = max(y_max + pad_y, 102)
+
+ax.set_xlim(xmin, xmax)
+ax.set_ylim(ymin, ymax)
 
 # Quadrant shading
-ax.axvspan(100, 110, ymin=0.5, ymax=1.0, alpha=0.15, color="#C8E6C9")
-ax.axvspan(100, 110, ymin=0.0, ymax=0.5, alpha=0.15, color="#FFE0B2")
-ax.axvspan(90, 100, ymin=0.0, ymax=0.5, alpha=0.15, color="#FFCDD2")
-ax.axvspan(90, 100, ymin=0.5, ymax=1.0, alpha=0.15, color="#BBDEFB")
+ax.axvspan(100, xmax, ymin=(100 - ymin)/(ymax - ymin), ymax=1, alpha=0.15, color="#C8E6C9")
+ax.axvspan(100, xmax, ymin=0, ymax=(100 - ymin)/(ymax - ymin), alpha=0.15, color="#FFE0B2")
+ax.axvspan(xmin, 100, ymin=0, ymax=(100 - ymin)/(ymax - ymin), alpha=0.15, color="#FFCDD2")
+ax.axvspan(xmin, 100, ymin=(100 - ymin)/(ymax - ymin), ymax=1, alpha=0.15, color="#BBDEFB")
 
-ax.text(102, 102, "LEADING", weight="bold", fontsize=10)
-ax.text(102, 98, "WEAKENING", weight="bold", fontsize=10)
-ax.text(96, 98, "LAGGING", weight="bold", fontsize=10)
-ax.text(96, 102, "IMPROVING", weight="bold", fontsize=10)
+ax.axvline(100, color="black", linewidth=1)
+ax.axhline(100, color="black", linewidth=1)
 
-# ---- Label overlap control ----
-label_offsets = {}
+ax.text(xmax - 0.4, ymax - 0.4, "LEADING", ha="right", va="top", weight="bold")
+ax.text(xmax - 0.4, ymin + 0.4, "WEAKENING", ha="right", va="bottom", weight="bold")
+ax.text(xmin + 0.4, ymin + 0.4, "LAGGING", ha="left", va="bottom", weight="bold")
+ax.text(xmin + 0.4, ymax - 0.4, "IMPROVING", ha="left", va="top", weight="bold")
 
-def smart_offset(x, y):
-    key = (round(x, 1), round(y, 1))
-    offset = label_offsets.get(key, 0)
-    label_offsets[key] = offset + 0.6
-    return offset
-
-# ---- Plot ETFs ----
 for etf in visible_etfs:
     x = rs_ratio[etf].iloc[-tail_length:]
     y = rs_momentum[etf].iloc[-tail_length:]
 
-    ax.plot(x, y, marker="o", linewidth=1.2, alpha=0.9)
-    ax.scatter(x.iloc[-1], y.iloc[-1], s=160, edgecolor="black")
-
-    offset = smart_offset(x.iloc[-1], y.iloc[-1])
-    ax.text(
-        x.iloc[-1] + 0.3,
-        y.iloc[-1] + 0.3 + offset,
-        etf,
-        fontsize=9,
-        weight="bold"
-    )
-
-# ---- Dynamic axis padding (anti-squeeze) ----
-x_last = rs_ratio[visible_etfs].iloc[-1]
-y_last = rs_momentum[visible_etfs].iloc[-1]
-
-pad_x = (x_last.max() - x_last.min()) * 0.25
-pad_y = (y_last.max() - y_last.min()) * 0.25
-
-ax.set_xlim(x_last.min() - pad_x, x_last.max() + pad_x)
-ax.set_ylim(y_last.min() - pad_y, y_last.max() + pad_y)
+    ax.plot(x, y, marker="o", linewidth=1.2)
+    ax.scatter(x.iloc[-1], y.iloc[-1], s=160, edgecolor="black", zorder=3)
+    ax.text(x.iloc[-1] + 0.2, y.iloc[-1] + 0.2, etf, fontsize=9, weight="bold")
 
 ax.set_xlabel("RS-Ratio")
 ax.set_ylabel("RS-Momentum")
 ax.set_title("Relative Rotation Graph (1Y, Weekly)")
 ax.grid(True)
+ax.set_aspect("equal", adjustable="box")
 
 st.pyplot(fig)
+
+# =====================================================
+# CONSOLIDATED QUADRANT TABLE
+# =====================================================
+quadrants = {
+    "Leading": [],
+    "Weakening": [],
+    "Lagging": [],
+    "Improving": []
+}
+
+for etf in visible_etfs:
+    rs_val = x_last[etf]
+    mom_val = y_last[etf]
+
+    if rs_val >= 100 and mom_val >= 100:
+        quadrants["Leading"].append(etf)
+    elif rs_val >= 100 and mom_val < 100:
+        quadrants["Weakening"].append(etf)
+    elif rs_val < 100 and mom_val < 100:
+        quadrants["Lagging"].append(etf)
+    else:
+        quadrants["Improving"].append(etf)
+
+max_len = max(len(v) for v in quadrants.values())
+
+quadrant_df = pd.DataFrame({
+    k: v + [""] * (max_len - len(v))
+    for k, v in quadrants.items()
+})
+
+st.subheader("ETF Quadrant Classification (Latest Week)")
+st.dataframe(quadrant_df, use_container_width=True, hide_index=True)
 
 # =====================================================
 # FOOTER
