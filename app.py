@@ -18,7 +18,7 @@ PERIOD = "1y"
 BENCHMARK = "NIFTYBEES.NS"
 ETFS_PER_PAGE = 5
 ROLL = 14
-TAIL = 10
+TAIL = 5
 
 ETF_LIST = [
     "BANKIETF", "CPSEETF", "ENERGY", "EVIETF", "FINIETF",
@@ -166,3 +166,4 @@ st.markdown(
     "<center>© 2026 Aditya Classes, Bikaner | ETF RRG Dashboard</center>",
     unsafe_allow_html=True
 )
+
